@@ -6,194 +6,211 @@
     {% if ($state == "init") { %}
         <h2 class="tool-header">Conversion Setup</h2>
         {% if ($site_size['site_can_migrate']) { %}
+            <div id="phase-selection-div" style="display:none;">
+                <blockquote id="active_migration_message" class="bg-info text-dark align-items-middle"></blockquote>
+                <br/>
+                <h5>Option Descriptions</h5>
+                <ul>
+                    <li><b>Option 1</b> – You used Vula Lessons in your 2023 site and your 2024 site WILL be similar. 
+                    You would like the CILT team to replicate your Vula site on Amathuba - this will be done in consultation with you.</li>
+                    <li><b>Option 2</b> – You used Vula Lessons in your 2023 site and your 2024 site WILL NOT be similar OR you are NOT using Vula Lessons 
+                    on your 2023 Vula site (only Resources) OR you would like to iteratively configure the course content structure yourself.</li>
+                    <li><b>Option 3</b> – You will be teaching a new course OR you wish to substantially change your course structure AND content from 2023 
+                    OR you wish to set up the Amathuba site and tools from scratch.</li>
+                </ul><br/>
+                <button type="button" class="btn btn-success" id="btn-self-service-migration" data-option="Option 3">Continue to self-service Migration</button></button> &nbsp;&nbsp;
+            </div>
+            
+            <div class="row" id="self-service-div" style="display:none;">
             <blockquote>Choose how you would like this site to be converted to Amathuba</blockquote>
-            <div class="row">
-                <div class="col-md-8">
-                    <form class="needs-validation" id="metadata">
-                        <input type="hidden" name="state"  id="state" value="{{ $state }}" />
-                        <input type="hidden" name="site-title" id="site-title" value="{{ $title }}" />
-                        <input type="hidden" name="current_user"  id="current_user" value="{{ $current_email }}" />
+                <div class="row">
+                    <div class="col-md-8">
+                        <form class="needs-validation" id="metadata">
+                            <input type="hidden" name="state"  id="state" value="{{ $state }}" />
+                            <input type="hidden" name="site-title" id="site-title" value="{{ $title }}" />
+                            <input type="hidden" name="current_user"  id="current_user" value="{{ $current_email }}" />
 
-                        <div class="row">
-                            <div class="col-md-12">
-                                <label>In Amathuba</label>
-                            </div>
-                            <div class="col-md-12 secondary" id="course_provider">
-                                <div class="radio">
-                                    <label for="create_course">
-                                        <input type="radio" name="select_type" id="create_course" checked="checked" />
-                                        Convert this site
-                                        {% if (count($provider_details) == 0) { %}
-                                            and create a new site in
-                                        {% } else { %}
-                                            {% if (count($provider_details) == 1) { $el = $provider_details[0]; %}
-                                            and create a new course site
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <label>In Amathuba</label>
+                                </div>
+                                <div class="col-md-12 secondary" id="course_provider">
+                                    <div class="radio">
+                                        <label for="create_course">
+                                            <input type="radio" name="select_type" id="create_course" checked="checked" />
+                                            Convert this site
+                                            {% if (count($provider_details) == 0) { %}
+                                                and create a new site in
                                             {% } else { %}
+                                                {% if (count($provider_details) == 1) { $el = $provider_details[0]; %}
+                                                and create a new course site
+                                                {% } else { %}
+                                                {% } %}
                                             {% } %}
-                                        {% } %}
-                                    </label>
-                                    <div id="do_course">
-                                        {% if (count($provider_details) == 0) { %}
-                                            <select class="form-control" name="provider_select" id="provider_select" required>
-                                                <option data-type="default" value="">Choose type of site ...</option>
-                                            {% foreach ($departments as $el) {
-                                                    $selected = ($current_dept == $el[0] ? 'selected' : '');
-                                                    print "<option value='". $el[0] ."' ". $selected ." data-dept='". $el[0] ."' data-course='other'>". $el[1] ."</option>";
-                                                }
-                                            %}
-                                            </select>
-                                        {% } else {
-                                            if (count($provider_details) == 1) {
-                                                $el = $provider_details[0]; %}
-                                                <input type="hidden" name="provider" id="provider"
-                                                    data-course="{{ $el['course'] }}"
-                                                    data-full="{{ $el['full'] }}"
-                                                    data-dept="{{ $el['dept'] }}"
-                                                    data-year="{{ $el['year'] }}"
-                                                    data-period="{{ $el['period'] }}"
-                                                    data-term="{{ $el['term'] }}"
-                                                    value="{{ $el['dept'] }}{{ $el['year'] }}{{ $el['no'] }}{{ $el['period'] }}"
-                                                    class="form-control disabled" disabled
-                                                    style="width: 100%;"/>
-                                                <!--span>{{ $el['dept'] }}{{ $el['year'] }}{{ $el['no'] }}{{ $el['period'] }}</span-->
+                                        </label>
+                                        <div id="do_course">
+                                            {% if (count($provider_details) == 0) { %}
+                                                <select class="form-control" name="provider_select" id="provider_select" required>
+                                                    <option data-type="default" value="">Choose type of site ...</option>
+                                                {% foreach ($departments as $el) {
+                                                        $selected = ($current_dept == $el[0] ? 'selected' : '');
+                                                        print "<option value='". $el[0] ."' ". $selected ." data-dept='". $el[0] ."' data-course='other'>". $el[1] ."</option>";
+                                                    }
+                                                %}
+                                                </select>
                                             {% } else {
-                                                    $course_site_depts = array();
-                                                    $project_sites = array();
+                                                if (count($provider_details) == 1) {
+                                                    $el = $provider_details[0]; %}
+                                                    <input type="hidden" name="provider" id="provider"
+                                                        data-course="{{ $el['course'] }}"
+                                                        data-full="{{ $el['full'] }}"
+                                                        data-dept="{{ $el['dept'] }}"
+                                                        data-year="{{ $el['year'] }}"
+                                                        data-period="{{ $el['period'] }}"
+                                                        data-term="{{ $el['term'] }}"
+                                                        value="{{ $el['dept'] }}{{ $el['year'] }}{{ $el['no'] }}{{ $el['period'] }}"
+                                                        class="form-control disabled" disabled
+                                                        style="width: 100%;"/>
+                                                    <!--span>{{ $el['dept'] }}{{ $el['year'] }}{{ $el['no'] }}{{ $el['period'] }}</span-->
+                                                {% } else {
+                                                        $course_site_depts = array();
+                                                        $project_sites = array();
 
-                                                    foreach ($provider_details as $el) {
-                                                        if (strlen($el['dept']) == 2) {
-                                                            array_push($project_sites,$el['dept']);
-                                                        } else if (strlen($el['dept']) == 3) {
-                                                            foreach ($all_departments as $all_depts) {
-                                                                if ($el['dept'] == $all_depts[0]) {
-                                                                    array_push($course_site_depts, array($all_depts[0], $all_depts[1], $all_depts[2]));
+                                                        foreach ($provider_details as $el) {
+                                                            if (strlen($el['dept']) == 2) {
+                                                                array_push($project_sites,$el['dept']);
+                                                            } else if (strlen($el['dept']) == 3) {
+                                                                foreach ($all_departments as $all_depts) {
+                                                                    if ($el['dept'] == $all_depts[0]) {
+                                                                        array_push($course_site_depts, array($all_depts[0], $all_depts[1], $all_depts[2]));
+                                                                    }
                                                                 }
                                                             }
-                                                        }
-                                                    } // foreach provider
+                                                        } // foreach provider
 
-                                                    $unique_project_sites = array_unique($project_sites, SORT_REGULAR);
-                                                    $unique_depts = array_unique($course_site_depts,SORT_REGULAR);
-                                                    if (count($unique_project_sites) > 1) { %}
-                                                        for <select class="form-control" name="provider_select" id="provider_select" required>
-                                                        <option data-type="default" value="">Choose type of site ...</option>
-                                                        {% foreach ($departments as $el) {
-                                                                $selected = ($current_dept == $el[0] ? 'selected' : '');
-                                                                print "<option value='".$el[0]."' $selected data-dept='other' data-course='other'>". $el[1] ."</option>";
-                                                            } %}
-                                                        </select>
-                                                    {% }
+                                                        $unique_project_sites = array_unique($project_sites, SORT_REGULAR);
+                                                        $unique_depts = array_unique($course_site_depts,SORT_REGULAR);
+                                                        if (count($unique_project_sites) > 1) { %}
+                                                            for <select class="form-control" name="provider_select" id="provider_select" required>
+                                                            <option data-type="default" value="">Choose type of site ...</option>
+                                                            {% foreach ($departments as $el) {
+                                                                    $selected = ($current_dept == $el[0] ? 'selected' : '');
+                                                                    print "<option value='".$el[0]."' $selected data-dept='other' data-course='other'>". $el[1] ."</option>";
+                                                                } %}
+                                                            </select>
+                                                        {% }
 
-                                                    if (count($unique_depts) == 1) {
-                                                        $el = $provider_details[0];
-                                                        foreach ($all_departments as $all_depts) {
-                                                            if ($el['dept'] == $all_depts[0]) { %}
-                                                                <input type="hidden" name="provider" id="provider"
-                                                                    data-dept="{{ $el['dept'] }}"
-                                                                    data-course = "other"
-                                                                    value = "{{ $el['dept'] }}, {{ $all_depts[2] }}"
-                                                                    class="form-control readonly" disabled
-                                                                    style="width: 100%;"/>
-                                                                <!--span>{{ $el['dept'] }}{{ $el['year'] }}{{ $el['no'] }}{{ $el['period'] }}</span-->
-                                                        {%  }
-                                                        } // foreach all department
-                                                    } else if (count($unique_depts) > 1) { %}
-                                                        for <select class="form-control" name="provider_select" id="provider_select" required>
-                                                        {%  foreach($unique_depts as $departs) {
-                                                                echo '<option value="'.$departs[0].'" data-dept="'.$departs[0].'" data-course="other">'.$departs[2].'</option>';
-                                                            } %}
-                                                        </select>
-                                                    {% }
-                                            } // else if (count($provider_details) == 1)
-                                        }
+                                                        if (count($unique_depts) == 1) {
+                                                            $el = $provider_details[0];
+                                                            foreach ($all_departments as $all_depts) {
+                                                                if ($el['dept'] == $all_depts[0]) { %}
+                                                                    <input type="hidden" name="provider" id="provider"
+                                                                        data-dept="{{ $el['dept'] }}"
+                                                                        data-course = "other"
+                                                                        value = "{{ $el['dept'] }}, {{ $all_depts[2] }}"
+                                                                        class="form-control readonly" disabled
+                                                                        style="width: 100%;"/>
+                                                                    <!--span>{{ $el['dept'] }}{{ $el['year'] }}{{ $el['no'] }}{{ $el['period'] }}</span-->
+                                                            {%  }
+                                                            } // foreach all department
+                                                        } else if (count($unique_depts) > 1) { %}
+                                                            for <select class="form-control" name="provider_select" id="provider_select" required>
+                                                            {%  foreach($unique_depts as $departs) {
+                                                                    echo '<option value="'.$departs[0].'" data-dept="'.$departs[0].'" data-course="other">'.$departs[2].'</option>';
+                                                                } %}
+                                                            </select>
+                                                        {% }
+                                                } // else if (count($provider_details) == 1)
+                                            }
 
-                                    if (count($provider_details) > 0) { %}
-                                        <span class="desc">for teaching in</span>
-                                    {% }
+                                        if (count($provider_details) > 0) { %}
+                                            <span class="desc">for teaching in</span>
+                                        {% }
 
-                                    if (count($provider_details) == 0) { %}
-                                        <input type="hidden" name="year" id="year" value="other" />
-                                    {% } else { %}
-                                        <select id="year" name="year" class="form-control" required>
-                                        {%  foreach ($years as $val) {
-                                                $selected = ($current_term == $val ? 'selected' : ''); %}
-                                                <option value="{{$val}}" {{$selected}}>{{$val}}</option>
-                                        {%  }  %}
-                                        </select>
-                                        <i class="fas fa-question-circle" title="Subject to Faculty approval." style="margin-left: 8px;"></i>
-                                    {% } %}
+                                        if (count($provider_details) == 0) { %}
+                                            <input type="hidden" name="year" id="year" value="other" />
+                                        {% } else { %}
+                                            <select id="year" name="year" class="form-control" required>
+                                            {%  foreach ($years as $val) {
+                                                    $selected = ($current_term == $val ? 'selected' : ''); %}
+                                                    <option value="{{$val}}" {{$selected}}>{{$val}}</option>
+                                            {%  }  %}
+                                            </select>
+                                            <i class="fas fa-question-circle" title="Subject to Faculty approval." style="margin-left: 8px;"></i>
+                                        {% } %}
+                                        </div>
+                                    </div>
+                                    <div class="radio">
+                                        <label for="just_convert">
+                                            <input type="radio" name="select_type" id="just_convert" />
+                                            Convert this site, but do not create
+                                            {% if (count($provider_details) == 0) { %}
+                                                a new site
+                                            {% } else { %}
+                                                a new course site
+                                            {% } %}
+                                        </label>
                                     </div>
                                 </div>
-                                <div class="radio">
-                                    <label for="just_convert">
-                                        <input type="radio" name="select_type" id="just_convert" />
-                                        Convert this site, but do not create
-                                        {% if (count($provider_details) == 0) { %}
-                                            a new site
-                                        {% } else { %}
-                                            a new course site
-                                        {% } %}
-                                    </label>
-                                </div>
                             </div>
-                        </div>
 
-                        <div class="row">
-                            <div class="col-md-12">
-                                <label for="notifications">Email Notifications for conversion updates</label>
-                            </div>
-                            <div class="col-md-12 secondary" >
-                                <span class="multi-item" value="{{ $current_email }}"> {{ $current_email }}</span>
-                                <textarea class="form-control" name="notifications" id="notifications"
-                                    placeholder="Additional addresses to notify of this migration">{{ $notifications }}</textarea>
-                                <button type="button" id="btn_add_me" style="display:none;">Add Me</button>
-                            </div>
-                        </div>
-                        {% if ($lesson_choice) { %}
-                        <div class="row">
-                            <div class="col-md-12">
-                                <label for="lessons">Lessons</label>
-                            </div>
-                            <div class="col-md-12 secondary" id="course_provider">
-                                <div class="radio" style="margin-top: 0px;">
-                                    <label for="create_course">
-                                        <input type="radio" name="lesson_type" id="lesson_default" checked="checked" value="default" />
-                                        Default
-                                        <i class="fas fa-info-circle" data-toggle="tooltip" data-placement="right"
-                                            title="The default conversion method, each of the item in a lesson page will be a separate content item in Amathuba."></i>
-                                    </label>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <label for="notifications">Email Notifications for conversion updates</label>
                                 </div>
-                                <div class="radio">
-                                    <label for="create_course">
-                                        <input type="radio" name="lesson_type" id="lesson_single" value="single" />
-                                        Single Content Page
-                                        <i class="fas fa-info-circle" data-toggle="tooltip" data-placement="right"
-                                            title="the text is collated on one HTML page and media files that “break the text up” in the current conversion will be included contextually as hyperlinks."></i>
-                                    </label>
-                                </div>
-                                <div class="radio">
-                                    <label for="create_course">
-                                        <input type="radio" name="lesson_type" id="lesson_bottom" value="bottom" />
-                                        Content with Media at the Bottom
-                                        <i class="fas fa-info-circle" data-toggle="tooltip" data-placement="right"
-                                            title="For this option, the text is collated on one HTML page and the media files are pushed below the text in sequence. "></i>
-                                    </label>
+                                <div class="col-md-12 secondary" >
+                                    <span class="multi-item" value="{{ $current_email }}"> {{ $current_email }}</span>
+                                    <textarea class="form-control" name="notifications" id="notifications"
+                                        placeholder="Additional addresses to notify of this migration">{{ $notifications }}</textarea>
+                                    <button type="button" id="btn_add_me" style="display:none;">Add Me</button>
                                 </div>
                             </div>
-                        </div>
-                        {% } else { %}
-                        <input type="hidden" name="lesson_type" value="default" />
-                        {% } %}
-                        <div class="row">
-                            <div class="col-xs-12">
-                                <button id="btn_start" class="btn btn-success disabled" type="button" data-path="a" disabled>Start Conversion </button>
-                                <small id="info" class="text-info" style="display:none;">This might take a couple of seconds.</small>
+                            {% if ($lesson_choice) { %}
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <label for="lessons">Lessons</label>
+                                </div>
+                                <div class="col-md-12 secondary" id="course_provider">
+                                    <div class="radio" style="margin-top: 0px;">
+                                        <label for="create_course">
+                                            <input type="radio" name="lesson_type" id="lesson_default" checked="checked" value="default" />
+                                            Default
+                                            <i class="fas fa-info-circle" data-toggle="tooltip" data-placement="right"
+                                                title="The default conversion method, each of the item in a lesson page will be a separate content item in Amathuba."></i>
+                                        </label>
+                                    </div>
+                                    <div class="radio">
+                                        <label for="create_course">
+                                            <input type="radio" name="lesson_type" id="lesson_single" value="single" />
+                                            Single Content Page
+                                            <i class="fas fa-info-circle" data-toggle="tooltip" data-placement="right"
+                                                title="the text is collated on one HTML page and media files that “break the text up” in the current conversion will be included contextually as hyperlinks."></i>
+                                        </label>
+                                    </div>
+                                    <div class="radio">
+                                        <label for="create_course">
+                                            <input type="radio" name="lesson_type" id="lesson_bottom" value="bottom" />
+                                            Content with Media at the Bottom
+                                            <i class="fas fa-info-circle" data-toggle="tooltip" data-placement="right"
+                                                title="For this option, the text is collated on one HTML page and the media files are pushed below the text in sequence. "></i>
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </form>
+                            {% } else { %}
+                            <input type="hidden" name="lesson_type" value="default" />
+                            {% } %}
+                            <div class="row">
+                                <div class="col-xs-12">
+                                    <button id="btn_start" class="btn btn-success disabled" type="button" data-path="a" disabled>Start Conversion </button>
+                                    <small id="info" class="text-info" style="display:none;">This might take a couple of seconds.</small>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
-        {% } else { %}
+            {% } else { %}
             <div class="row">
                 <div class="col-xs-12">
                     <div class="alert alert-warning" role="alert" style="padding: 8px;">
@@ -232,7 +249,12 @@
                 {% } %}
             </div>
             <div class="row">
+                {% if ( $has_clickup_task ) { %}
+                    <p><br/>This Vula site is part of an active managed conversion phase. Migration Option 3 was selected for the site. The site is being converted to Amathuba, which could take between 10 minutes and 
+                        12 hours depending on site content and the number of conversions in progress. When it's done, we'll send you an email confirmation, or you can check back here for updates.</p>
+                {% } else { %}
                 <p><br/>This Vula site is being converted to Amathuba, which could take between 10 minutes and 12 hours depending on site content and the number of conversions in progress. When it's done, we'll send you an email confirmation, or you can check back here for updates.</p>
+                {% } %}
             </div>
         {% } elseif ($state == 'completed') { %}
             <div class="row">

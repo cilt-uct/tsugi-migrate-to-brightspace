@@ -8,11 +8,15 @@ class MigrateDAO {
     private $PDOX;
     private $p;
     private $tool;
+    public static $clickup_option_id; //This refers to a specific clickup column
 
     public function __construct($PDOX, $p, $tool) {
         $this->PDOX = $PDOX;
         $this->p = $p;
         $this->tool = $tool;
+        if (isset($this->tool['clickup_option_Id'])) {
+            self::$clickup_option_id = $this->tool['clickup_option_Id'];
+        }
     }
 
     function getMigration($link_id, $user_id, $site_id, $provider, $is_admin, $title) {
@@ -120,7 +124,8 @@ class MigrateDAO {
     }
 
     function startMigration($link_id, $user_id, $site_id, $notifications, $dept, $term, $provider, $is_test, $enrol_users, $lesson_type,
-                                $target_title, $target_course, $target_term, $target_dept, $create_course_offering) {
+                                $target_title, $target_course, $target_term, $target_dept, $create_course_offering, $task_id = null) {
+        
         $now = date("Y-m-d H:i:s");
 
         $user_details = $this->PDOX->rowDie("SELECT user_id, displayname,email FROM {$this->p}lti_user WHERE user_id = :userid;",
@@ -161,7 +166,14 @@ class MigrateDAO {
                         ':target_title' => $target_title, ':target_course' => $target_course,
                         ':target_term' => $target_term, ':target_dept' => $target_dept, ':create_course_offering' => $create_course_offering,
                         ':notifications' => $notifications, ':workflow' => json_encode($workflow));
-        return $this->PDOX->queryDie($query, $arr);
+        $result = $this->PDOX->queryDie($query, $arr);
+
+        if($result) {
+            $updateTask_result = $this->updateTask($task_id);
+            return $updateTask_result;
+        }
+
+        return $result;
     }
 
     function resetMigration($link_id, $user_id, $state) {
@@ -379,5 +391,173 @@ class MigrateDAO {
             'site_can_migrate' => $size_result < $this->tool['site_size_limit'],
             'ss' => $this->tool['SOAP_user'] ." ". $this->tool['SOAP_pass']
         ];
+    }
+
+    #### CLICKUP
+    public function getSiteProperties($site_id) {
+        $school = '';
+        $department = '';
+        $subject = '';
+        $result = null;
+    
+        if ($this->tool['SOAP_active']) {
+            try {
+                $login_client = new \SoapClient($this->tool['SOAP_url'] . '/sakai-ws/soap/login?wsdl');
+                $session_array = explode(',', $login_client->loginToServer($this->tool['SOAP_user'], $this->tool['SOAP_pass']));
+    
+                $sakai_site = new \SoapClient($this->tool['SOAP_url'] . '/sakai-ws/soap/sakai?wsdl');
+    
+                if ($sakai_site && isset($session_array[0])) {
+                    try {
+                        $school = $sakai_site->getSiteProperty($session_array[0], $site_id, 'School');
+                        $department = $sakai_site->getSiteProperty($session_array[0], $site_id, 'Department');
+                        $subject = $sakai_site->getSiteProperty($session_array[0], $site_id, 'Subject');
+        
+                        // Handle null responses
+                        $school = ($school !== null) ? $school : "No School Data";
+                        $department = ($department !== null) ? $department : "No Department Data";
+                        $subject = ($subject !== null) ? $subject : "No Subject Data";
+        
+                        $result = array(
+                            'site_id' => $site_id,
+                            'school' => $school,
+                            'department' => $department,
+                            'subject' => $subject
+                        );
+                    } catch (SoapFault $soapFault) {
+                        $result = array(
+                            'error' => 'SOAP Error: ' . $soapFault->getMessage()
+                        );
+                    } catch (Exception $e) {
+                        $result = array(
+                            'error' => 'General Error: ' . $e->getMessage()
+                        );
+                    }
+                }
+                if (isset($session_array[0])) {
+                    $login_client->logout($session_array[0]);
+                }
+            } catch (SoapFault $soapFault) {
+                $result = array(
+                    'error' => 'SOAP Error: ' . $soapFault->getMessage()
+                );
+            } catch (Exception $e) {
+                $result = array(
+                    'error' => 'General Error: ' . $e->getMessage()
+                );
+            }
+        }
+        return $result;
+    }
+
+    private function makeRequest($method, $url, $data = array()) {
+        $headers = array(
+            'Authorization: '. $this->tool['api_key'],
+            'Content-Type: application/json',
+        );
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);    
+
+        if (in_array($method, array('POST', 'PUT'))) {
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+        }
+
+        $response = curl_exec($ch);
+        if (curl_errno($ch)) {
+            curl_close($ch);
+            throw new Exception('cURL Error: ' . curl_error($ch));
+        }
+
+        curl_close($ch);
+        return json_decode($response, true);
+    }
+
+    function getClickupTaskBySiteId($site_id) {
+        $vula_site_url = $this->tool['vula_url'].$site_id;
+        $task_customFilter = [
+            [
+                "field_id" => $this->tool['custom_vulaSite_fieldId'],
+                "operator" => "=",
+                "value" => $vula_site_url
+            ]
+        ];
+                
+        $encoded_customFilter = urlencode(json_encode($task_customFilter));
+        $endpoint = "{$this->tool['base_url']}team/{$this->tool['workspace_id']}/task?include_closed=true&custom_task_ids=true&team_id={$this->tool['workspace_id']}&custom_fields=$encoded_customFilter";
+        
+        try {
+            $response = $this->makeRequest('GET', $endpoint);
+            if (!empty($response['tasks'])) {
+            $task = $response['tasks'][0];
+            return $task;
+            } else {
+                return null;
+            }
+        } catch (Exception $e) {
+            $error_message = 'Error occurred while getting clickup task: ' . $e->getMessage();
+            return $error_message;
+        }
+    }
+
+    function getClickupTaskByName($task_name) {
+        $endpoint = "{$this->tool['base_url']}list/{$this->tool['list_id']}/task?archived=false&include_closed=true&reverse=true";
+
+        try {
+            $response = $this->makeRequest('GET', $endpoint);
+            $tasks = $response['tasks'];
+            foreach ($tasks as $task) {
+                if ($task['name'] === $task_name) {
+                    return $task;
+                }
+            }
+        
+        } catch (Exception $e) {
+            $error_message = 'Error occurred while getting ClickUp task: ' . $e->getMessage();
+            return $error_message;
+        }
+    }
+
+    function getSelfServiceMigrationOptionId($custom_fields) {
+        $mig_option = null;
+        foreach ($custom_fields as $field) {
+            if ($field['id'] === $this->tool['clickup_option_Id']) {
+                $options = $field['type_config']['options'];
+
+                foreach ($options as $option) {
+                    if ($option['name'] === "Option 3") {
+                        $mig_option = $option['orderindex'];
+                    }
+                }
+            }
+        }
+        return  $mig_option;
+    }
+
+    function updateTask($taskId) {
+        $clickupOption_fieldId = $this->tool['clickup_option_Id'];
+        $endpoint = "{$this->tool['base_url']}task/$taskId/field/$clickupOption_fieldId?custom_task_ids=false";
+        $data = ['value' => $this->tool['new_migrationOptionId']];
+
+        $updateResult = [
+            'task_id' => $taskId,
+            'message' => '',
+        ];
+
+        try {
+            $response = $this->makeRequest('POST', $endpoint, $data);
+            if ($response && isset($response['id']) && $response['id'] === $taskId) {
+                $updateResult['message'] = 'ClickUp task updated successfully';
+            } else {
+                $updateResult['message'] = 'Error updating ClickUp task';
+            }
+        } catch (Exception $e) {
+            $updateResult['message'] = 'An error occurred while updating the ClickUp task: ' . $e->getMessage();
+        }
+        return $updateResult;
     }
 }

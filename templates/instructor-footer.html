@@ -12,11 +12,52 @@
         var timeout = null;
         setStateClass(state);
 
-        $('[data-toggle="tooltip"]').tooltip();
+        // Get site properties and clickup details
+        const has_site_properties = '{{ $has_site_properties }}';
+        const site_properties = '{{ json_encode($site_properties) }}';
+        const has_clickup_task = '{{ $has_clickup_task}}';
+        const clickup_task = '{{ json_encode($clickup_task) }}';
 
-        // if ($("#workflow").exists()) {
-        //     console.log("workflow");
-        // }
+        if (has_site_properties && has_clickup_task) {
+            var clickup_task_id = '{{ $task_id }}';
+            var clickup_custom_fields = '{{ json_encode($clickup_custom_fields) }}';
+            var clickup_option_id = '{{ $clickup_option_id }}';
+            var matching_field = null;
+            var custom_fields_decoded = JSON.parse(clickup_custom_fields);
+
+            for (var i = 0; i < custom_fields_decoded.length; i++) {
+                var field = custom_fields_decoded[i];
+                if (field.id === clickup_option_id) {
+                    matching_field = field;
+                }
+            }
+
+            if (matching_field !== null && matching_field.type === 'drop_down') {
+                var optionValue = matching_field.value;
+                var options = matching_field.type_config.options;
+                var selected_option = options.find(option => option.orderindex === optionValue);
+                var selectedMigrationOption = selected_option ? selected_option.name : 'No option';
+                var changeable_options = ["Option 1 ", "Option 2 ", "DEFAULT option 2", "No response", "No option"];
+
+                if (changeable_options.includes(selectedMigrationOption)) {
+                    $("#active_migration_message").html(`
+                        <i class="fas fa-exclamation-circle fa-2x align-middle d-inline" style="float: left; padding-right:10px; vertical-align:middle; line-height: 50px;"></i>
+                        This site is part of an active managed conversion phase. The site has
+                        <span id="sp_option" name="sp_option">${selectedMigrationOption}</span>
+                        selected for migration to Amathuba. If you would like to start self-service migration for this site, click the button below.
+                        <b>Once you start the self-service migration your selection will be saved as Option 3</b>.
+                    `);
+                    $("#phase-selection-div").show();
+                } 
+                else {
+                    $("#self-service-div").show();
+                }
+            }
+        } else {
+            $("#self-service-div").show();
+        }
+
+        $('[data-toggle="tooltip"]').tooltip();
 
         if (!static_state_array.includes(state)) {
             setTimeout("window.open(self.location, '_self');", 30000);
@@ -79,7 +120,6 @@
 
         function resetMigration(a, type, alt) {
             var data = { "type": type };
-
             var jqxhr = $.post('{{ $reset }}', data, function(result) {
                     hideHelp();
                     if (result.success === 1) {
@@ -101,8 +141,9 @@
             const organizer = $('#organizer').exists() ? $('#organizer').val().trim().replace(/\r?\n/g, ', ') : '',
                   notification = $('#'+ alt).exists() ?  $('#'+ alt).val().trim().replace(/\r?\n/g, ', ') : '',
                   _provider = $('#provider').exists() ? $('#provider') : undefined,
-                  _provider_select = $('#provider_select').exists() ? $('#provider_select') : undefined;
-                  lesson_type = $("input[name='lesson_type']:checked").val() == undefined ? $("input[name='lesson_type']").val() : $("input[name='lesson_type']:checked").val();
+                  _provider_select = $('#provider_select').exists() ? $('#provider_select') : undefined,
+                  lesson_type = $("input[name='lesson_type']:checked").val() == undefined ? $("input[name='lesson_type']").val() : $("input[name='lesson_type']:checked").val(),
+                  clickupTaskId = clickup_task_id ? clickup_task_id : undefined;
 
             let provider = _provider ? _provider.val() : (_provider_select ? _provider_select.val() : ''),
                 course = _provider ? (_provider.data('course')) :
@@ -124,7 +165,8 @@
                     "term": term,
                     "create_course": create_course,
                     "enrol": 1, // for self conversion we enroll the site owners and support staff
-                    "lesson_type": lesson_type
+                    "lesson_type": lesson_type,
+                    "clickup_task_id": clickupTaskId
                 }
 
             // console.log(data);
@@ -178,6 +220,17 @@
             $(`#step${_current_step}`).find("span").removeClass('hidden-xs');
             // set completed
             $(".steps > .step").filter(function() { return $(this).data("step") < _current_step; }).addClass("is-complete hidden-xs").removeClass('is-pending');
+        }
+
+        function getSelectedMigrationOption(customFieldId) {
+            const customField = clickup_details.custom_fields.find(field => field.id === customFieldId);
+            if (customField && customField.type === 'drop_down') {
+                const optionValue = customField.value;
+                const options = customField.type_config.options;
+                const selectedOption = options.find(option => option.orderindex === optionValue);
+                return selectedOption ? selectedOption.name : 'No option selected';
+            }
+            return 'Invalid clickup custom field or type';
         }
 
         $('#year, #provider, #provider_select').on("change", function(event) {
@@ -246,6 +299,14 @@
             const _me = $(this);
 
             resetMigration(_me.attr('id'), 'init', 'notifications_hidden');
+        });
+
+        $('#btn-self-service-migration').on('click', function(event) {
+            event.preventDefault();
+            new_MigrationOption = $(this).data('option');
+            
+            $("#phase-selection-div").hide();
+            $("#self-service-div").show();
         });
 
         $('#btn_start').click( function(event) {

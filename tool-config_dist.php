@@ -30,6 +30,16 @@ $tool['SOAP_url'] = 'https://vula.uct.ac.za';
 $tool['SOAP_user'] = 'username';
 $tool['SOAP_pass'] = 'password';
 
+# clickup config
+$tool['api_key'] = 'apikey';
+$tool['list_id'] = 'listid';
+$tool['workspace_id'] = 'workspaceid';
+$tool['base_url'] = 'https://api.clickup.com/api/v2/';
+$tool['clickup_option_Id'] = 'clickupOptionId'; // clickup custom field id for migration options
+$tool['new_migrationOptionId'] = 'newMigrationOptionId'; // clickup uuid of option 3
+$tool['custom_vulaSite_fieldId'] = 'customVulaSiteFieldId'; // clickup uuid for custom vula site field
+$tool['vuladev_url'] = 'https://vuladev.uct.ac.za/portal/site/';
+
 # these sites are used for development - so ignore coming soon page
 $tool['dev'] = [];
 

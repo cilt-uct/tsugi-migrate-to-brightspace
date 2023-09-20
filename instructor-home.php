@@ -22,6 +22,13 @@ $context_title = $LAUNCH->ltiRawParameter('context_title','No Title');
 $user_role = str_contains($LAUNCH->ltiRawParameter('roles', 'none'), 'Administrator') ? 1 : 0;
 
 $provider = "none";
+$title = $CONTEXT->title;
+$clickup_option_id = $tool['clickup_option_Id'];
+$site_title = strstr($title, ",", true);
+$has_site_properties = false;
+$has_clickup_task = false;
+$site_properties = [];
+$clickup_task = null;
 
 if ($course_providers != $context_id) {
     // So we might have some providers to show
@@ -37,11 +44,41 @@ if ($course_providers != $context_id) {
 $migrationDAO = new MigrateDAO($PDOX, $CFG->dbprefix, $tool);
 $current_migration = $migrationDAO->getMigration($LINK->id, $USER->id, $site_id, $provider, false, $context_title);
 
+// Get site properties and clickup tasks
+function getMigrationPhase($clickup_option_id, $title, $migrationDAO, $site_id, $site_title, $has_site_properties, $has_clickup_task, $site_properties, $clickup_task) {
+    $error_message = '';
+    try {
+        $site_properties = $migrationDAO->getSiteProperties($site_id);
+
+        if ($site_properties && !isset($site_properties['error']) && in_array($site_properties['subject'], ["Migration_Phase2:Year_2", "Migration_Phase2:Year_3"])) {
+            $clickup_task = $migrationDAO->getClickupTaskByName($site_title);
+            $has_site_properties = true;
+            $has_clickup_task = (bool) $clickup_task;
+        }
+    } catch (SoapFault $soapFault) {
+        $error_message = 'Caught SOAP Fault: ' . $soapFault->getMessage();
+    } catch (Exception $e) {
+        $error_message = 'Caught Exception: ' . $e->getMessage();
+    }
+
+    $result = [
+        "error" => $error_message,
+        "has_site_properties" => $has_site_properties,
+        "has_clickup_task" => $has_clickup_task,
+        "site_properties" => $site_properties,
+        "clickup_task" => $clickup_task
+    ];
+
+    return $result;
+}
+
+$siteMigrationPhase = getMigrationPhase($clickup_option_id, $title, $migrationDAO, $site_id, $site_title, $has_site_properties, $has_clickup_task, $site_properties, $clickup_task);
+$site_properties = $siteMigrationPhase["site_properties"];
+$clickup_task = $siteMigrationPhase["clickup_task"];
+
 $menu = false; // We are not using a menu
 
 $workflow = $current_migration['workflow'] ? json_decode($current_migration['workflow']) : [];
-
-$title = $CONTEXT->title;
 
 // $title = 'Pan-African Ensemble 2021';
 // $provider = array('MUZ1366H,2021','MUZ2366H,2021','MUZ3366H,2021');
@@ -224,19 +261,17 @@ $context = [
     'user_role' => $user_role,
     'styles'     => [ addSession('static/css/app.min.css') ],
     'scripts'    => [ addSession('static/js/jquery.email.multiple.js'), addSession('static/js/jquery.validate.min.js'),  ],
-
     'title'      => $title,
     'site_id'    => $site_id,
     'imported_site_id' => $current_migration['imported_site_id'],
     'transfer_site_id' => $current_migration['transfer_site_id'],
     'target_site_id' => $current_migration['target_site_id'],
-
     'current_email' => $USER->email,
     'email'      => $current_migration['state'] == 'init' ? $USER->email : $current_migration['email'],
     'name'       => $current_migration['state'] == 'init' ? $USER->displayname : $current_migration['displayname'],
     'notifications' => $current_migration['notification'],
 
-                 // 'init','starting','exporting','running','importing','completed','error','admin'
+    // 'init','starting','exporting','running','importing','completed','error','admin'
     'state'      => $current_migration['state'],
     'workflow'   => $workflow,
     'years'      => range(date("Y"), date("Y")+1),
@@ -245,26 +280,28 @@ $context = [
     'fetch_workflow' => addSession( str_replace("\\","/",$CFG->getCurrentFileUrl('actions/process.php')) ),
     'fetch_report'   => $current_migration['report_url'],
     'report_url' =>  $current_migration['report_url'],
-
     'has_report' => strlen($current_migration['report_url'] ?? '') > 0,
     'provider'   => $provider,
     'provider_details'=> $provider_details,
     'started' => $current_migration['started_at'],
     'modified_at' => $current_migration['modified_at'],
     'last_modified' => $time_modified,
-
     'current_provider' => $current_migration['provider'],
     'current_dept'     => $current_migration['dept'],
     'current_term'     => $current_migration['term'],
-
     'target_title' => $current_migration['target_title'],
     'target_course' => $current_migration['target_course'],
     'target_term' => $current_migration['target_term'] == OTHER ? 'other' : $current_migration['target_term'],
     'target_dept' => $current_migration['target_dept'],
     'create_course_offering' => $current_migration['create_course_offering'],
-
     'site_size' => $migrationDAO->getSiteSize($site_id),
-
+    'has_site_properties' => $siteMigrationPhase["has_site_properties"],
+    'site_properties' => $site_properties,
+    'has_clickup_task' => $siteMigrationPhase["has_clickup_task"],
+    'clickup_task' => $clickup_task,
+    'task_id' => ($clickup_task && isset($clickup_task['id'])) ? $clickup_task['id'] : null,
+    'clickup_custom_fields' => ($clickup_task && isset($clickup_task['custom_fields'])) ? $clickup_task['custom_fields'] : null,
+    'clickup_option_id' => $tool['clickup_option_Id'],
     'lesson_choice' => false, // for single conversions we hide lesson choice - for now
     'departments' => $departments,
     'all_departments' => $full_departments_list,

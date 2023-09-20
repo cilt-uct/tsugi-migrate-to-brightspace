@@ -36,10 +36,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $target_course = isset($_POST['course']) ? $_POST['course'] : '';
                 $enrol_users = isset($_POST['enrol']) ? $_POST['enrol'] : 1; # Enrol site owners and support staff in the converted site
                 $lesson_type = isset($_POST['lesson_type']) ? $_POST['lesson_type'] : 'default';
+                $task_id = isset($_POST['clickup_task_id']) ? $_POST['clickup_task_id'] : '';
 
                 $result['success'] = $migrationDAO->startMigration($LINK->id, $USER->id, $site_id,
                                             $_POST['notification'], $dept, $term, $provider, $_POST['is_test'], $enrol_users, $lesson_type,
-                                            $title, $target_course, $term, $dept, $create_course) ? 1 : 0;
+                                            $title, $target_course, $term, $dept, $create_course, $task_id) ? 1 : 0;
                 break;
             case 'updating':
             case 'starting':
