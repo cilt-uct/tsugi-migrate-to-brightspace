@@ -81,6 +81,7 @@ $full_departments_list = [
 
     ['AGI','HUM','African Gender Institute'],
     ['ALL','HUM','African Languages & Literature'],
+    ['ASL','HUM', 'Dept of African Studies & Linguistics'],
     ['CAS','HUM','African Studies'],
     ['SAN','HUM','Anthropology (ANS)'],
     ['FAM','HUM','Centre for Film & Media Studies'],

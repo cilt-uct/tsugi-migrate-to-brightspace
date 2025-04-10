@@ -1,7 +1,7 @@
 <section data-state="{{ $state }}">
     {% $unique_providers = array_unique($provider_details, SORT_REGULAR);
        $count_provider_details = count($unique_providers); %}
-    <!-- <pre>|{{ json_encode($provider_details) }}|</pre> -->
+    <!-- <pre>{{ $count_provider_details }}|{{ json_encode($provider_details) }}|</pre> -->
     <!-- <pre>{{ $instructor }}|{{ $user_role }}</pre> -->
     <!-- <pre>{{ json_encode($site_size) }}</pre> -->
 
@@ -64,7 +64,7 @@
 
                                                     foreach ($provider_details as $el) {
                                                         if (strlen($el['dept']) == 2) {
-                                                            array_push($project_sites,$el['dept']);
+                                                            array_push($project_sites, $el['dept']);
                                                         } else if (strlen($el['dept']) == 3) {
                                                             foreach ($all_departments as $all_depts) {
                                                                 if ($el['dept'] == $all_depts[0]) {
@@ -76,6 +76,7 @@
 
                                                     $unique_project_sites = array_unique($project_sites, SORT_REGULAR);
                                                     $unique_depts = array_unique($course_site_depts,SORT_REGULAR);
+
                                                     if (count($unique_project_sites) > 1) { %}
                                                         for <select class="form-control" name="provider_select" id="provider_select" required>
                                                         <option data-type="default" value="">Choose type of site ...</option>
